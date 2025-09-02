@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="id" class="bg-gray-900">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sistem Pakan Ikan Otomatis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        /* Dark theme styling */
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            min-height: 100vh;
+            padding-bottom: 80px; /* Space for mobile menu */
+        }
+        
+        .card {
+            background: rgba(51, 65, 85, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .gauge-container {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .schedule-time {
+            background: rgba(30, 41, 59, 0.8);
+            border: 2px solid rgba(148, 163, 184, 0.2);
+            color: #e2e8f0;
+        }
+        
+        .schedule-time:focus {
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+            outline: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0f766e 0%, #134e4a 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(20, 184, 166, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #475569 0%, #334155 100%);
+            color: #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(71, 85, 105, 0.3);
+        }
+        
+        .status-good {
+            background: rgba(20, 184, 166, 0.15);
+            color: #5eead4;
+            border: 1px solid rgba(20, 184, 166, 0.3);
+        }
+        
+        .status-warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        .status-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .status-info {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .mqtt-status .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulse 2s infinite;
+        }
+        
+        .mqtt-status.connected .status-dot {
+            background: #14b8a6;
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fcd34d;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        .alert-success {
+            background: rgba(20, 184, 166, 0.15);
+            color: #6ee7b7;
+            border: 1px solid rgba(20, 184, 166, 0.3);
+        }
+        
+        .alert-info {
+            background: rgba(59, 130, 246, 0.15);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        /* Mobile Menu Styles */
+        .mobile-menu {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            z-index: 1000;
+        }
+
+        .menu-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 8px;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            margin: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-item:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(13, 148, 136, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .menu-item.active:before {
+            opacity: 1;
+        }
+
+        .menu-item.active {
+            color: #14b8a6;
+            transform: translateY(-2px);
+        }
+
+        .menu-item:not(.active) {
+            color: #64748b;
+        }
+
+        .menu-item:hover {
+            color: #14b8a6;
+            transform: translateY(-1px);
+        }
+
+        .menu-icon {
+            font-size: 20px;
+            margin-bottom: 4px;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .menu-text {
+            font-size: 11px;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Content sections for mobile */
+        .content-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        /* Mobile responsiveness */
+        @media (min-width: 768px) {
+            .mobile-menu {
+                display: none;
+            }
+            
+            body {
+                padding-bottom: 0;
+            }
+            
+            .content-section {
+                display: block !important;
+            }
+            
+            .desktop-grid {
+                display: grid !important;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .desktop-grid {
+                display: none;
+            }
+            
+            .mobile-content {
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Enhanced mobile cards */
+        .mobile-card {
+            background: rgba(51, 65, 85, 0.9);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+
+<body class="text-slate-100">
+
+    <main class="container mx-auto max-w-6xl p-4 md:p-6">
+        <header class="text-center mb-8">
+            <h1
+                class="text-2xl md:text-3xl font-bold flex items-center justify-center gap-3 text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">
+                <i class="fas fa-fish text-teal-400 text-3xl"></i>
+                Sistem Pakan Ikan Otomatis
+                <div class="mqtt-status inline-flex items-center ml-2">
+                    <div class="status-dot" id="mqttStatus"></div>
+                </div>
+            </h1>
+            <p class="text-slate-400 mt-2">Dashboard Monitoring & Control System</p>
+        </header>
+
+        <!-- Alert Container -->
+        <div id="alertContainer" class="mb-6"></div>
+
+        <!-- Desktop Grid Layout -->
+        <div class="desktop-grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <article class="card p-6 rounded-xl">
+                <header class="mb-6">
+                    <h3 class="text-xl font-bold flex items-center gap-3 text-teal-400 mb-2">
+                        <i class="fas fa-chart-line"></i> Status Sistem
+                    </h3>
+                    <p class="text-slate-400 text-sm">Monitor status pakan, level air, kualitas air, dan suhu.</p>
+                </header>
+
+                <div class="space-y-4">
+                    <div class="gauge-container p-4 rounded-lg">
+                        <h5 class="text-sm font-semibold text-teal-400 mb-3">
+                            <i class="fas fa-seedling mr-2"></i>Status Pakan
+                        </h5>
+                        <div class="boolean-status flex items-center gap-3 p-3 rounded-lg font-semibold text-sm"
+                            id="foodStatus">
+                            <i class="fas fa-check-circle"></i>
+                            <span id="foodStatusText">Tersedia</span>
+                        </div>
+                    </div>
+
+                    <div class="gauge-container p-4 rounded-lg flex items-center gap-4">
+                        <canvas id="waterLevelGauge" class="w-16 h-16"></canvas>
+                        <div class="flex-1">
+                            <h5 class="text-sm font-semibold text-teal-400 mb-1">
+                                <i class="fas fa-tint mr-2"></i>Level Air
+                            </h5>
+                            <div class="flex items-baseline gap-2 mb-2">
+                                <span id="waterLevelValue" class="text-2xl font-bold text-slate-100">50</span>
+                                <small class="text-slate-400">cm</small>
+                            </div>
+                            <div class="status-indicator px-3 py-1 rounded-full text-xs font-semibold"
+                                id="waterLevelStatus">Mengukur...</div>
+                        </div>
+                    </div>
+
+                    <div class="gauge-container p-4 rounded-lg flex items-center gap-4">
+                        <canvas id="turbidityGauge" class="w-16 h-16"></canvas>
+                        <div class="flex-1">
+                            <h5 class="text-sm font-semibold text-teal-400 mb-1">
+                                <i class="fas fa-eye mr-2"></i>Kekeruhan Air
+                            </h5>
+                            <div class="flex items-baseline gap-2 mb-2">
+                                <span id="turbidityValue" class="text-2xl font-bold text-slate-100">0.0</span>
+                                <small class="text-slate-400">NTU</small>
+                            </div>
+                            <div class="status-indicator px-3 py-1 rounded-full text-xs font-semibold"
+                                id="turbidityStatus">Mengukur...</div>
+                        </div>
+                    </div>
+
+                    <div class="gauge-container p-4 rounded-lg flex items-center gap-4">
+                        <canvas id="temperatureGauge" class="w-16 h-16"></canvas>
+                        <div class="flex-1">
+                            <h5 class="text-sm font-semibold text-teal-400 mb-1">
+                                <i class="fas fa-thermometer-half mr-2"></i>Suhu Air
+                            </h5>
+                            <div class="flex items-baseline gap-2 mb-2">
+                                <span id="temperatureValue" class="text-2xl font-bold text-slate-100">27.0</span>
+                                <small class="text-slate-400">°C</small>
+                            </div>
+                            <div class="status-indicator px-3 py-1 rounded-full text-xs font-semibold"
+                                id="temperatureStatus">Mengukur...</div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="card p-6 rounded-xl">
+                <header class="mb-6">
+                    <h3 class="text-xl font-bold flex items-center gap-3 text-teal-400 mb-2">
+                        <i class="fas fa-clock"></i> Jadwal Pakan Otomatis
+                    </h3>
+                    <p class="text-slate-400 text-sm">Atur jadwal pemberian pakan otomatis untuk ikan Anda (3 kali
+                        sehari).</p>
+                </header>
+
+                <div class="space-y-4 mb-6">
+                    <div class="space-y-2">
+                        <label for="morning-time" class="block text-sm font-semibold text-teal-400">
+                            <i class="fas fa-sun mr-2"></i>Pagi
+                        </label>
+                        <input type="time" id="morning-time" class="schedule-time w-full p-3 rounded-lg text-sm"
+                            value="09:00" data-index="0">
+                    </div>
+                    <div class="space-y-2">
+                        <label for="evening-time" class="block text-sm font-semibold text-teal-400">
+                            <i class="fas fa-cloud-sun mr-2"></i>Sore
+                        </label>
+                        <input type="time" id="evening-time" class="schedule-time w-full p-3 rounded-lg text-sm"
+                            value="15:00" data-index="1">
+                    </div>
+                    <div class="space-y-2">
+                        <label for="night-time" class="block text-sm font-semibold text-teal-400">
+                            <i class="fas fa-moon mr-2"></i>Malam
+                        </label>
+                        <input type="time" id="night-time" class="schedule-time w-full p-3 rounded-lg text-sm"
+                            value="20:00" data-index="2">
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <button id="saveScheduleButton" class="btn-secondary w-full py-3 rounded-lg font-semibold text-sm">
+                        <i class="fas fa-save mr-2"></i> Simpan Jadwal
+                    </button>
+
+                    <button id="feedButton" class="btn-primary w-full py-3 text-white rounded-lg font-bold text-sm">
+                        <i class="fas fa-fish mr-2"></i> Beri Pakan Sekarang
+                    </button>
+                </div>
+            </article>
+        </div>
+
+        <!-- Mobile Content Sections -->
+        <div class="mobile-content md:hidden">
+            <!-- Status System Section -->
+            <div id="statusSection" class="content-section active">
+                <div class="mobile-card p-6 mb-4">
+                    <h3 class="text-lg font-bold flex items-center gap-3 text-teal-400 mb-4">
+                        <i class="fas fa-chart-line"></i> Status Sistem
+                    </h3>
+
+                    <div class="space-y-4">
+                        <div class="gauge-container p-4 rounded-lg">
+                            <h5 class="text-sm font-semibold text-teal-400 mb-3">
+                                <i class="fas fa-seedling mr-2"></i>Status Pakan
+                            </h5>
+                            <div class="boolean-status flex items-center gap-3 p-3 rounded-lg font-semibold text-sm"
+                                id="foodStatusMobile">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Tersedia</span>
+                            </div>
+                        </div>
+
+                        <div class="gauge-container p-4 rounded-lg flex items-center gap-4">
+                            <canvas id="waterLevelGaugeMobile" class="w-16 h-16"></canvas>
+                            <div class="flex-1">
+                                <h5 class="text-sm font-semibold text-teal-400 mb-1">
+                                    <i class="fas fa-tint mr-2"></i>Level Air
+                                </h5>
+                                <div class="flex items-baseline gap-2 mb-2">
+                                    <span id="waterLevelValueMobile" class="text-2xl font-bold text-slate-100">50</span>
+                                    <small class="text-slate-400">cm</small>
+                                </div>
+                                <div class="status-indicator px-3 py-1 rounded-full text-xs font-semibold"
+                                    id="waterLevelStatusMobile">Mengukur...</div>
+                            </div>
+                        </div>
+
+                        <div class="gauge-container p-4 rounded-lg flex items-center gap-4">
+                            <canvas id="turbidityGaugeMobile" class="w-16 h-16"></canvas>
+                            <div class="flex-1">
+                                <h5 class="text-sm font-semibold text-teal-400 mb-1">
+                                    <i class="fas fa-eye mr-2"></i>Kekeruhan Air
+                                </h5>
+                                <div class="flex items-baseline gap-2 mb-2">
+                                    <span id="turbidityValueMobile" class="text-2xl font-bold text-slate-100">0.0</span>
+                                    <small class="text-slate-400">NTU</small>
+                                </div>
+                                <div class="status-indicator px-3 py-1 rounded-full text-xs font-semibold"
+                                    id="turbidityStatusMobile">Mengukur...</div>
+                            </div>
+                        </div>
+
+                        <div class="gauge-container p-4 rounded-lg flex items-center gap-4">
+                            <canvas id="temperatureGaugeMobile" class="w-16 h-16"></canvas>
+                            <div class="flex-1">
+                                <h5 class="text-sm font-semibold text-teal-400 mb-1">
+                                    <i class="fas fa-thermometer-half mr-2"></i>Suhu Air
+                                </h5>
+                                <div class="flex items-baseline gap-2 mb-2">
+                                    <span id="temperatureValueMobile" class="text-2xl font-bold text-slate-100">27.0</span>
+                                    <small class="text-slate-400">°C</small>
+                                </div>
+                                <div class="status-indicator px-3 py-1 rounded-full text-xs font-semibold"
+                                    id="temperatureStatusMobile">Mengukur...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule Section -->
+            <div id="scheduleSection" class="content-section">
+                <div class="mobile-card p-6 mb-4">
+                    <h3 class="text-lg font-bold flex items-center gap-3 text-teal-400 mb-4">
+                        <i class="fas fa-clock"></i> Jadwal Pakan
+                    </h3>
+
+                    <div class="space-y-4 mb-6">
+                        <div class="space-y-2">
+                            <label for="morning-time-mobile" class="block text-sm font-semibold text-teal-400">
+                                <i class="fas fa-sun mr-2"></i>Pagi
+                            </label>
+                            <input type="time" id="morning-time-mobile" class="schedule-time w-full p-3 rounded-lg text-sm"
+                                value="09:00" data-index="0">
+                        </div>
+                        <div class="space-y-2">
+                            <label for="evening-time-mobile" class="block text-sm font-semibold text-teal-400">
+                                <i class="fas fa-cloud-sun mr-2"></i>Sore
+                            </label>
+                            <input type="time" id="evening-time-mobile" class="schedule-time w-full p-3 rounded-lg text-sm"
+                                value="15:00" data-index="1">
+                        </div>
+                        <div class="space-y-2">
+                            <label for="night-time-mobile" class="block text-sm font-semibold text-teal-400">
+                                <i class="fas fa-moon mr-2"></i>Malam
+                            </label>
+                            <input type="time" id="night-time-mobile" class="schedule-time w-full p-3 rounded-lg text-sm"
+                                value="20:00" data-index="2">
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <button id="saveScheduleButtonMobile" class="btn-secondary w-full py-3 rounded-lg font-semibold text-sm">
+                            <i class="fas fa-save mr-2"></i> Simpan Jadwal
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feed Section -->
+            <div id="feedSection" class="content-section">
+                <div class="mobile-card p-6 mb-4">
+                    <h3 class="text-lg font-bold flex items-center gap-3 text-teal-400 mb-4">
+                        <i class="fas fa-fish"></i> Kontrol Pakan
+                    </h3>
+                    
+                    <div class="text-center mb-6">
+                        <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-teal-500/20 mb-4">
+                            <i class="fas fa-fish text-teal-400 text-3xl"></i>
+                        </div>
+                        <p class="text-slate-400 text-sm">Tekan tombol di bawah untuk memberi pakan ikan sekarang</p>
+                    </div>
+
+                    <button id="feedButtonMobile" class="btn-primary w-full py-4 text-white rounded-lg font-bold text-base">
+                        <i class="fas fa-fish mr-2"></i> Beri Pakan Sekarang
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center py-6 mt-8 text-xs text-slate-500">
+        <div class="flex items-center justify-center gap-2 mb-2">
+            <i class="fas fa-code text-teal-400"></i>
+            <span>© 2025 Kelas Robot. All rights reserved.</span>
+        </div>
+        <div class="text-slate-600">Powered by IoT & MQTT Technology</div>
+    </footer>
+
+    <!-- Mobile Bottom Menu -->
+    <nav class="mobile-menu md:hidden">
+        <div class="flex justify-around items-center py-2">
+            <button class="menu-item active" data-section="statusSection">
+                <div class="menu-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <span class="menu-text">Status</span>
+            </button>
+            
+            <button class="menu-item" data-section="scheduleSection">
+                <div class="menu-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <span class="menu-text">Jadwal</span>
+            </button>
+            
+            <button class="menu-item" data-section="feedSection">
+                <div class="menu-icon">
+                    <i class="fas fa-fish"></i>
+                </div>
+                <span class="menu-text">Pakan</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        // MQTT Configuration - FIXED TO MATCH ARDUINO
+        const MQTT_CONFIG = {
+            broker: 'wss://broker.emqx.io:8084/mqtt',
+            topics: {
+                feed: 'aquafeeder_5ff4a2ce/feed',
+                schedule_morning: 'aquafeeder_5ff4a2ce/schedule/morning',
+                schedule_evening: 'aquafeeder_5ff4a2ce/schedule/evening',
+                schedule_night: 'aquafeeder_5ff4a2ce/schedule/night',
+                status: 'aquafeeder_5ff4a2ce/status',
+                food_available: 'aquafeeder_5ff4a2ce/food_available',
+                water_level: 'aquafeeder_5ff4a2ce/water_level',
+                turbidity: 'aquafeeder_5ff4a2ce/turbidity',
+                temperature: 'aquafeeder_5ff4a2ce/temperature',
+                feed_status: 'aquafeeder_5ff4a2ce/feed_status',
+                alerts: 'aquafeeder_5ff4a2ce/alerts',
+                heartbeat: 'aquafeeder_5ff4a2ce/heartbeat'
+            }
+        };
+
+        // Global variables
+        let mqttClient = null;
+        let isFoodAvailable = true;
+        let currentWaterLevel = 50;
+        let currentTurbidity = 0.0;
+        let currentTemperature = 27.0;
+        let selectedSchedule = ['09:00', '15:00', '20:00'];
+
+        // DOM elements
+        const feedButton = document.getElementById('feedButton');
+        const feedButtonMobile = document.getElementById('feedButtonMobile');
+        const saveScheduleButton = document.getElementById('saveScheduleButton');
+        const saveScheduleButtonMobile = document.getElementById('saveScheduleButtonMobile');
+        const foodStatus = document.getElementById('foodStatus');
+        const foodStatusMobile = document.getElementById('foodStatusMobile');
+        const waterLevelValue = document.getElementById('waterLevelValue');
+        const waterLevelValueMobile = document.getElementById('waterLevelValueMobile');
+        const waterLevelStatus = document.getElementById('waterLevelStatus');
+        const waterLevelStatusMobile = document.getElementById('waterLevelStatusMobile');
+        const waterLevelGauge = document.getElementById('waterLevelGauge');
+        const waterLevelGaugeMobile = document.getElementById('waterLevelGaugeMobile');
+        const turbidityValue = document.getElementById('turbidityValue');
+        const turbidityValueMobile = document.getElementById('turbidityValueMobile');
+        const turbidityStatus = document.getElementById('turbidityStatus');
+        const turbidityStatusMobile = document.getElementById('turbidityStatusMobile');
+        const turbidityGauge = document.getElementById('turbidityGauge');
+        const turbidityGaugeMobile = document.getElementById('turbidityGaugeMobile');
+        const temperatureValue = document.getElementById('temperatureValue');
+        const temperatureValueMobile = document.getElementById('temperatureValueMobile');
+        const temperatureStatus = document.getElementById('temperatureStatus');
+        const temperatureStatusMobile = document.getElementById('temperatureStatusMobile');
+        const temperatureGauge = document.getElementById('temperatureGauge');
+        const temperatureGaugeMobile = document.getElementById('temperatureGaugeMobile');
+        const mqttStatus = document.getElementById('mqttStatus');
+        const alertContainer = document.getElementById('alertContainer');
+
+        // Mobile menu functionality
+        function initMobileMenu() {
+            const menuItems = document.querySelectorAll('.menu-item');
+            const contentSections = document.querySelectorAll('.content-section');
+
+            menuItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const targetSection = item.getAttribute('data-section');
+                    
+                    // Remove active class from all menu items and sections
+                    menuItems.forEach(menu => menu.classList.remove('active'));
+                    contentSections.forEach(section => section.classList.remove('active'));
+                    
+                    // Add active class to clicked menu item and corresponding section
+                    item.classList.add('active');
+                    document.getElementById(targetSection).classList.add('active');
+                });
+            });
+        }
+
+        // Function to draw gauge with dark theme
+        function drawGauge(canvas, value, maxValue, color) {
+            const ctx = canvas.getContext('2d');
+            const size = 64;
+            canvas.width = size;
+            canvas.height = size;
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size / 2 - 6;
+            const lineWidth = 6;
+            const startAngle = -Math.PI / 2;
+            const percentage = Math.min(value / maxValue, 1);
+            const endAngle = startAngle + percentage * 2 * Math.PI;
+
+            ctx.clearRect(0, 0, size, size);
+
+            // Draw background arc
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.lineWidth = lineWidth;
+            ctx.strokeStyle = 'rgba(51, 65, 85, 0.4)';
+            ctx.stroke();
+
+            // Draw value arc
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+            ctx.lineWidth = lineWidth;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+
+            // Add glow effect
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        // Enhanced alert function with auto-dismiss and different types
+        function showAlert(message, type = 'error', duration = 5000) {
+            const alertClass = type === 'error' ? 'alert-error' : 
+                             type === 'warning' ? 'alert-warning' :
+                             type === 'info' ? 'alert-info' : 'alert-success';
+            const iconClass = type === 'error' ? 'fa-exclamation-circle' : 
+                             type === 'warning' ? 'fa-exclamation-triangle' :
+                             type === 'info' ? 'fa-info-circle' : 'fa-check-circle';
+
+            // Create alert element
+            const alertId = 'alert_' + Date.now();
+            const alertHTML = `
+                <div id="${alertId}" class="${alertClass} p-4 rounded-lg text-sm font-medium mb-2 animate-pulse">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas ${iconClass} mr-2"></i>
+                            ${message}
+                        </div>
+                        <button onclick="dismissAlert('${alertId}')" class="ml-2 text-sm opacity-70 hover:opacity-100">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Add to container
+            alertContainer.insertAdjacentHTML('beforeend', alertHTML);
+
+            // Auto-dismiss after specified duration
+            if (duration > 0) {
+                setTimeout(() => {
+                    dismissAlert(alertId);
+                }, duration);
+            }
+
+            // Log to console
+            console.log(`Alert [${type.toUpperCase()}]: ${message}`);
+        }
+
+        // Function to dismiss alert
+        function dismissAlert(alertId) {
+            const alertElement = document.getElementById(alertId);
+            if (alertElement) {
+                alertElement.style.transition = 'opacity 0.3s ease-out';
+                alertElement.style.opacity = '0';
+                setTimeout(() => {
+                    alertElement.remove();
+                }, 300);
+            }
+        }
+
+        // Update food status with dark theme (both desktop and mobile)
+        function updateFoodStatus(available) {
+            isFoodAvailable = available;
+            const statusHTML = available ? 
+                '<i class="fas fa-check-circle"></i><span>Tersedia</span>' :
+                '<i class="fas fa-times-circle"></i><span>Kosong</span>';
+            const statusClass = available ? 
+                'boolean-status flex items-center gap-3 p-3 rounded-lg font-semibold text-sm status-good' :
+                'boolean-status flex items-center gap-3 p-3 rounded-lg font-semibold text-sm status-danger';
+            
+            if (foodStatus) {
+                foodStatus.className = statusClass;
+                foodStatus.innerHTML = statusHTML;
+            }
+            if (foodStatusMobile) {
+                foodStatusMobile.className = statusClass;
+                foodStatusMobile.innerHTML = statusHTML;
+            }
+        }
+
+        // Update water level display with dark theme (both desktop and mobile)
+        function updateWaterLevel(level) {
+            currentWaterLevel = Math.max(0, level);
+            const levelText = currentWaterLevel.toFixed(0);
+            let statusText, statusClass, color;
+
+            if (currentWaterLevel < 20) {
+                statusClass = 'status-indicator px-3 py-1 rounded-full text-xs font-semibold status-danger';
+                statusText = 'Rendah';
+                color = '#ef4444';
+            } else if (currentWaterLevel < 40) {
+                statusClass = 'status-indicator px-3 py-1 rounded-full text-xs font-semibold status-warning';
+                statusText = 'Sedang';
+                color = '#f59e0b';
+            } else if (currentWaterLevel < 70) {
+                statusClass = 'status-indicator px-3 py-1 rounded-full text-xs font-semibold status-info';
+                statusText = 'Baik';
+                color = '#3b82f6';
+            } else {
+                statusClass = 'status-indicator px-3 py-1 rounded-full text-xs font-semibold status-good';
+                statusText = 'Tinggi';
+                color = '#14b8a6';
+            }
+
+            // Update desktop elements
+            if (waterLevelValue) waterLevelValue.textContent = levelText;
+            if (waterLevelStatus) {
+                waterLevelStatus.className = statusClass;
+                waterLevelStatus.textContent = statusText;
+            }
+            if (waterLevelGauge) drawGauge(waterLevelGauge, currentWaterLevel, 100, color);
+
+            // Update mobile elements
+            if (waterLevelValueMobile) waterLevelValueMobile.textContent = levelText;
+            if (waterLevelStatusMobile) {
+                waterLevelStatusMobile.className = statusClass;
+                waterLevelStatusMobile.textContent = statusText;
+            }
+            if (waterLevelGaugeMobile) drawGauge(waterLevelGaugeMobile, currentWaterLevel, 100, color);
+        }
+
+        // Update turbidity display - FIXED TO HANDLE ARDUINO VALUES (both desktop and mobile)
+        function updateTurbidity(value) {
+            // Convert Arduino turbidity value (0-3000) to NTU scale (0-20)
+            currentTurbidity = Math.max(0, value / 150); // Scale down from 3000 to 20
+            const turbidityText = currentTurbidity.toFixed(1);
+            let statusText, statusClass, color;
+
+            if (currentTurbidity <= 1.0) {
+                statusClass = 'status-indicator px-3 py-1 rounded-full text-xs font-semibold status-good';
+                statusText = 'Sangat Jernih';
+                color = '#14b8a6';
+            } else if (currentTurbidity <= 4.0) {
+                statusClass = 'status-indicator px-3 py-1 rounded-full text-xs font-semibold status-info';
+                statusText = 'Jernih';
+                color = '#3b82f6';
+            } else if (currentTurbidity <= 10.0) {
+                statusClass = 'status-indicator px-3 py-1 rounded-full text-xs font-semibold status-warning';
+                statusText = 'Agak Keruh';
+                color = '#f59e0b';
+            } else {
+                statusClass = 'status-indicator px-3 py-1 rounded-full text-xs font-semibold status-danger';
+                statusText = 'Keruh';
+                color = '#ef4444';
+            }
+
+            // Update desktop elements
+            if (turbidityValue) turbidityValue.textContent = turbidityText;
+            if (turbidityStatus) {
+                turbidityStatus.className = statusClass;
+                turbidityStatus.textContent = statusText;
+            }
+            if (turbidityGauge) drawGauge(turbidityGauge, currentTurbidity, 20, color);
+
+            // Update mobile elements
+            if (turbidityValueMobile) turbidityValueMobile.textContent = turbidityText;
+            if (turbidityStatusMobile) {
+                turbidityStatusMobile.className = statusClass;
+                turbidityStatusMobile.textContent = statusText;
+            }
+            if (turbidityGaugeMobile) drawGauge(turbidityGaugeMobile, currentTurbidity, 20, color);
+        }
+
+        // Update temperature display with dark theme (both desktop and mobile)
+        function updateTemperature(value) {
+            currentTemperature = Math.max(0, value);
+            const temperatureText = currentTemperature.toFixed(1);
+            let statusText, statusClass, color;
+
+            if (currentTemperature < 25.0) {
+                statusClass = 'status-indicator px-3 py-1 rounded-full text-xs font-semibold status-info';
+                statusText = 'Dingin';
+                color = '#3b82f6';
+            } else if (currentTemperature >= 25.0 && currentTemperature <= 30.0) {
+                statusClass = 'status-indicator px-3 py-1 rounded-full text-xs font-semibold status-good';
+                statusText = 'Normal';
+                color = '#14b8a6';
+            } else {
+                statusClass = 'status-indicator px-3 py-1 rounded-full text-xs font-semibold status-danger';
+                statusText = 'Panas';
+                color = '#ef4444';
+            }
+
+            // Update desktop elements
+            if (temperatureValue) temperatureValue.textContent = temperatureText;
+            if (temperatureStatus) {
+                temperatureStatus.className = statusClass;
+                temperatureStatus.textContent = statusText;
+            }
+            if (temperatureGauge) drawGauge(temperatureGauge, currentTemperature - 15, 20, color);
+
+            // Update mobile elements
+            if (temperatureValueMobile) temperatureValueMobile.textContent = temperatureText;
+            if (temperatureStatusMobile) {
+                temperatureStatusMobile.className = statusClass;
+                temperatureStatusMobile.textContent = statusText;
+            }
+            if (temperatureGaugeMobile) drawGauge(temperatureGaugeMobile, currentTemperature - 15, 20, color);
+        }
+
+        // Initialize MQTT connection
+        function initMQTT() {
+            try {
+                mqttClient = mqtt.connect(MQTT_CONFIG.broker, {
+                    will: {
+                        topic: MQTT_CONFIG.topics.status,
+                        payload: JSON.stringify({
+                            device: 'fish_feeder_web',
+                            status: 'offline',
+                            timestamp: new Date().toISOString()
+                        }),
+                        qos: 0,
+                        retain: true
+                    }
+                });
+
+                mqttClient.on('connect', () => {
+                    console.log('Connected to MQTT broker');
+                    updateMQTTStatus(true);
+
+                    // Subscribe to all sensor data topics
+                    Object.values(MQTT_CONFIG.topics).forEach(topic => {
+                        mqttClient.subscribe(topic, { qos: 0 }, (err) => {
+                            if (!err) {
+                                console.log(`Subscribed to ${topic}`);
+                            } else {
+                                console.error(`Failed to subscribe to ${topic}:`, err);
+                                showAlert(`Gagal berlangganan ke ${topic}!`, 'error');
+                            }
+                        });
+                    });
+
+                    // Publish online status
+                    publishMessage(MQTT_CONFIG.topics.status, JSON.stringify({
+                        device: 'fish_feeder_web',
+                        status: 'online',
+                        timestamp: new Date().toISOString()
+                    }), { qos: 0, retain: true });
+
+                    showAlert('Berhasil terhubung ke MQTT broker!', 'success', 3000);
+                });
+
+                mqttClient.on('message', (topic, message) => {
+                    handleMQTTMessage(topic, message.toString());
+                });
+
+                mqttClient.on('error', (error) => {
+                    console.error('MQTT Error:', error);
+                    updateMQTTStatus(false);
+                    showAlert('Gagal terhubung ke MQTT broker!', 'error');
+                });
+
+                mqttClient.on('close', () => {
+                    console.log('MQTT connection closed');
+                    updateMQTTStatus(false);
+                    showAlert('Koneksi MQTT terputus!', 'warning');
+                });
+
+            } catch (error) {
+                console.error('Failed to initialize MQTT:', error);
+                updateMQTTStatus(false);
+                showAlert('Gagal menginisialisasi MQTT!', 'error');
+            }
+        }
+
+        // Handle MQTT messages - FIXED TO MATCH ARDUINO FORMAT
+        function handleMQTTMessage(topic, message) {
+            try {
+                console.log(`Received message on ${topic}: ${message}`);
+                
+                // Handle non-JSON messages first
+                if (topic === MQTT_CONFIG.topics.feed && message === 'manual_feed') {
+                    console.log('Manual feed command received');
+                    return;
+                }
+
+                // Try to parse as JSON
+                let data;
+                try {
+                    data = JSON.parse(message);
+                } catch (parseError) {
+                    console.warn('Non-JSON message received:', message);
+                    return;
+                }
+
+                switch (topic) {
+                    case MQTT_CONFIG.topics.food_available:
+                        if (typeof data.available === 'boolean') {
+                            updateFoodStatus(data.available);
+                            console.log('Food status updated:', data.available ? 'Available' : 'Empty');
+                        }
+                        break;
+                        
+                    case MQTT_CONFIG.topics.water_level:
+                        if (typeof data.level === 'number') {
+                            updateWaterLevel(data.level);
+                            console.log('Water level updated:', data.level, 'cm');
+                        }
+                        break;
+                        
+                    case MQTT_CONFIG.topics.turbidity:
+                        if (typeof data.value === 'number') {
+                            updateTurbidity(data.value); // This now handles Arduino scale properly
+                            console.log('Turbidity updated:', data.value, 'raw value');
+                        }
+                        break;
+                        
+                    case MQTT_CONFIG.topics.temperature:
+                        if (typeof data.value === 'number') {
+                            updateTemperature(data.value);
+                            console.log('Temperature updated:', data.value, '°C');
+                        }
+                        break;
+                        
+                    case MQTT_CONFIG.topics.schedule_morning:
+                        if (data.time && /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(data.time)) {
+                            selectedSchedule[0] = data.time;
+                            updateScheduleUI();
+                            console.log('Morning schedule updated:', data.time);
+                        }
+                        break;
+                        
+                    case MQTT_CONFIG.topics.schedule_evening:
+                        if (data.time && /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(data.time)) {
+                            selectedSchedule[1] = data.time;
+                            updateScheduleUI();
+                            console.log('Evening schedule updated:', data.time);
+                        }
+                        break;
+                        
+                    case MQTT_CONFIG.topics.schedule_night:
+                        if (data.time && /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(data.time)) {
+                            selectedSchedule[2] = data.time;
+                            updateScheduleUI();
+                            console.log('Night schedule updated:', data.time);
+                        }
+                        break;
+                        
+                    case MQTT_CONFIG.topics.feed_status:
+                        if (data.type && data.status) {
+                            const feedType = data.type.includes('manual') ? 'Manual' : 'Terjadwal';
+                            const feedTime = data.time || 'Unknown';
+                            if (data.status === 'success') {
+                                showAlert(`${feedType} feeding berhasil pada ${feedTime}`, 'success', 4000);
+                            } else {
+                                showAlert(`${feedType} feeding gagal pada ${feedTime}`, 'error', 4000);
+                            }
+                        }
+                        break;
+                        
+                    case MQTT_CONFIG.topics.alerts:
+                        if (data.message) {
+                            const alertType = data.type === 'alert' ? 'warning' : 'info';
+                            const alertTime = data.time || new Date().toLocaleTimeString().substring(0, 5);
+                            showAlert(`[${alertTime}] ${data.message}`, alertType, 8000);
+                        }
+                        break;
+                        
+                    case MQTT_CONFIG.topics.status:
+                        console.log('Device status:', data);
+                        if (data.device === 'aqua_feeder') {
+                            if (data.status === 'online') {
+                                showAlert('Arduino feeder online!', 'info', 3000);
+                            } else if (data.status === 'offline') {
+                                showAlert('Arduino feeder offline!', 'warning', 5000);
+                            }
+                        }
+                        break;
+                        
+                    case MQTT_CONFIG.topics.heartbeat:
+                        if (data.device === 'aqua_feeder' && data.status === 'running') {
+                            console.log('Heartbeat received - Arduino is healthy');
+                            // Don't show alert for every heartbeat, just log it
+                        }
+                        break;
+                }
+            } catch (error) {
+                console.error('Error parsing MQTT message:', error, 'Topic:', topic, 'Message:', message);
+            }
+        }
+
+        // Publish MQTT message
+        function publishMessage(topic, data, options = {}) {
+            if (mqttClient && mqttClient.connected) {
+                mqttClient.publish(topic, data, options);
+                console.log('Published to', topic, ':', data);
+            } else {
+                console.warn('MQTT not connected, cannot publish message');
+                showAlert('MQTT tidak terhubung, gagal mengirim pesan!', 'warning');
+            }
+        }
+
+        // Update MQTT status UI
+        function updateMQTTStatus(connected) {
+            if (connected) {
+                mqttStatus.classList.add('connected');
+            } else {
+                mqttStatus.classList.remove('connected');
+            }
+        }
+
+        // Feed fish function with enhanced animation
+        function feedFish() {
+            if (!isFoodAvailable) {
+                showAlert('Pakan habis! Silakan isi ulang.', 'warning');
+                return;
+            }
+
+            const buttons = [feedButton, feedButtonMobile].filter(btn => btn);
+            
+            buttons.forEach(button => {
+                if (button) {
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Memberi Pakan...';
+                    button.style.transform = 'scale(0.95)';
+                }
+            });
+
+            publishMessage(MQTT_CONFIG.topics.feed, 'manual_feed', { qos: 0 });
+            showAlert('Perintah memberi pakan telah dikirim!', 'info', 3000);
+
+            setTimeout(() => {
+                buttons.forEach(button => {
+                    if (button) {
+                        button.disabled = false;
+                        button.innerHTML = '<i class="fas fa-fish mr-2"></i> Beri Pakan Sekarang';
+                        button.style.transform = 'scale(1)';
+                    }
+                });
+            }, 2000);
+        }
+
+        // Update schedule UI
+        function updateScheduleUI() {
+            const scheduleInputs = document.querySelectorAll('.schedule-time');
+            scheduleInputs.forEach((input, index) => {
+                if (selectedSchedule[index]) {
+                    input.value = selectedSchedule[index];
+                }
+            });
+        }
+
+        // Handle schedule input changes
+        function handleScheduleInput() {
+            const scheduleInputs = document.querySelectorAll('.schedule-time');
+            scheduleInputs.forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.getAttribute('data-index'));
+                    const newTime = e.target.value;
+                    if (newTime && /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newTime)) {
+                        selectedSchedule[index] = newTime;
+                        console.log(`Temporary schedule update ${index === 0 ? 'morning' : index === 1 ? 'evening' : 'night'}:`, newTime);
+                    } else {
+                        showAlert('Format waktu tidak valid!', 'error');
+                    }
+                });
+            });
+        }
+
+        // Handle schedule saving
+        function handleScheduleSaving() {
+            const saveButtons = [saveScheduleButton, saveScheduleButtonMobile].filter(btn => btn);
+            
+            saveButtons.forEach(button => {
+                if (button) {
+                    button.addEventListener('click', () => {
+                        const morningTime = selectedSchedule[0];
+                        const eveningTime = selectedSchedule[1];
+                        const nightTime = selectedSchedule[2];
+
+                        if (!morningTime || !eveningTime || !nightTime) {
+                            showAlert('Harap isi semua jadwal (Pagi, Sore, dan Malam)!', 'warning');
+                            return;
+                        }
+
+                        saveButtons.forEach(btn => {
+                            if (btn) {
+                                btn.disabled = true;
+                                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Menyimpan...';
+                                btn.style.transform = 'scale(0.95)';
+                            }
+                        });
+
+                        // Send schedule updates to Arduino
+                        if (morningTime) {
+                            publishMessage(MQTT_CONFIG.topics.schedule_morning, JSON.stringify({
+                                time: morningTime,
+                                timestamp: new Date().toISOString()
+                            }), { qos: 0, retain: true });
+                        }
+
+                        if (eveningTime) {
+                            publishMessage(MQTT_CONFIG.topics.schedule_evening, JSON.stringify({
+                                time: eveningTime,
+                                timestamp: new Date().toISOString()
+                            }), { qos: 0, retain: true });
+                        }
+
+                        if (nightTime) {
+                            publishMessage(MQTT_CONFIG.topics.schedule_night, JSON.stringify({
+                                time: nightTime,
+                                timestamp: new Date().toISOString()
+                            }), { qos: 0, retain: true });
+                        }
+
+                        setTimeout(() => {
+                            saveButtons.forEach(btn => {
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.innerHTML = '<i class="fas fa-save mr-2"></i> Simpan Jadwal';
+                                    btn.style.transform = 'scale(1)';
+                                }
+                            });
+                        }, 2000);
+
+                        showAlert('Jadwal berhasil disimpan dan dikirim ke Arduino!', 'success');
+                        console.log('Saved schedules:', selectedSchedule);
+                    });
+                }
+            });
+        }
+
+        // Initialize dashboard
+        function initDashboard() {
+            console.log('Initializing Fish Feeder Dashboard...');
+            
+            initMQTT();
+            initMobileMenu();
+            
+            // Add event listeners for feed buttons
+            if (feedButton) feedButton.addEventListener('click', feedFish);
+            if (feedButtonMobile) feedButtonMobile.addEventListener('click', feedFish);
+            
+            handleScheduleInput();
+            handleScheduleSaving();
+            updateScheduleUI();
+
+            // Initialize with default values
+            updateFoodStatus(true);
+            updateWaterLevel(50);
+            updateTurbidity(0.0);
+            updateTemperature(27.0);
+
+            // Redraw gauges on window resize
+            window.addEventListener('resize', () => {
+                updateWaterLevel(currentWaterLevel);
+                updateTurbidity(currentTurbidity);
+                updateTemperature(currentTemperature);
+            });
+
+            // Add smooth scroll behavior
+            document.documentElement.style.scrollBehavior = 'smooth';
+            
+            showAlert('Dashboard berhasil diinisialisasi!', 'success', 2000);
+            console.log('Dashboard initialization complete');
+        }
+
+        // Make dismissAlert available globally for onclick handlers
+        window.dismissAlert = dismissAlert;
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+
+</html>
