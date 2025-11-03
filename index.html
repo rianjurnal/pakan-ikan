@@ -7,6 +7,7 @@
     <title>Dashboard - Sistem Pakan Ikan Otomatis</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <style>
@@ -255,6 +256,58 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
         }
+
+        /* Chart container styling */
+        .chart-container {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            position: relative;
+            height: 300px; /* Fixed height for charts */
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .chart-controls button {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #14b8a6;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Ensure charts have proper dimensions */
+        .chart-wrapper {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        /* Global data controls */
+        .global-data-controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .global-data-controls button {
+            flex: 1;
+            max-width: 200px;
+        }
     </style>
 </head>
 
@@ -388,6 +441,72 @@
                     </button>
                 </div>
             </article>
+
+            <!-- Chart Section -->
+            <div class="col-span-1 lg:col-span-2 space-y-6">
+                <article class="card p-6 rounded-xl">
+                    <header class="mb-6">
+                        <h3 class="text-xl font-bold flex items-center gap-3 text-teal-400 mb-2">
+                            <i class="fas fa-chart-area"></i> Grafik Data Sensor
+                        </h3>
+                        <p class="text-slate-400 text-sm">Visualisasi data sensor dari waktu ke waktu.</p>
+                    </header>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Water Level Chart -->
+                        <div class="chart-container p-4">
+                            <div class="chart-title">
+                                <i class="fas fa-tint"></i> Level Air
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="waterLevelChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Turbidity Chart -->
+                        <div class="chart-container p-4">
+                            <div class="chart-title">
+                                <i class="fas fa-eye"></i> Kekeruhan Air
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="turbidityChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Temperature Chart -->
+                        <div class="chart-container p-4">
+                            <div class="chart-title">
+                                <i class="fas fa-thermometer-half"></i> Suhu Air
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="temperatureChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Food Status Chart -->
+                        <div class="chart-container p-4">
+                            <div class="chart-title">
+                                <i class="fas fa-seedling"></i> Status Pakan
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="foodStatusChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Global Data Controls -->
+                    <div class="mt-8 pt-6 border-t border-slate-700">
+                        <div class="global-data-controls">
+                            <button id="exportAllDataBtn" class="btn-primary py-3 px-6 rounded-lg font-semibold text-sm">
+                                <i class="fas fa-file-export mr-2"></i> Export Semua Data ke CSV
+                            </button>
+                            <button id="clearAllDataBtn" class="btn-secondary py-3 px-6 rounded-lg font-semibold text-sm">
+                                <i class="fas fa-trash mr-2"></i> Hapus Semua Data
+                            </button>
+                        </div>
+                    </div>
+                </article>
+            </div>
         </div>
 
         <!-- Mobile Content Sections -->
@@ -517,6 +636,69 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Chart Section Mobile -->
+            <div id="chartSection" class="content-section">
+                <div class="mobile-card p-6 mb-4">
+                    <h3 class="text-lg font-bold flex items-center gap-3 text-teal-400 mb-4">
+                        <i class="fas fa-chart-area"></i> Grafik Data Sensor
+                    </h3>
+
+                    <div class="space-y-6">
+                        <!-- Water Level Chart Mobile -->
+                        <div class="chart-container p-4">
+                            <div class="chart-title">
+                                <i class="fas fa-tint"></i> Level Air
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="waterLevelChartMobile"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Turbidity Chart Mobile -->
+                        <div class="chart-container p-4">
+                            <div class="chart-title">
+                                <i class="fas fa-eye"></i> Kekeruhan Air
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="turbidityChartMobile"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Temperature Chart Mobile -->
+                        <div class="chart-container p-4">
+                            <div class="chart-title">
+                                <i class="fas fa-thermometer-half"></i> Suhu Air
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="temperatureChartMobile"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Food Status Chart Mobile -->
+                        <div class="chart-container p-4">
+                            <div class="chart-title">
+                                <i class="fas fa-seedling"></i> Status Pakan
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="foodStatusChartMobile"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Global Data Controls Mobile -->
+                        <div class="mt-6 pt-6 border-t border-slate-700">
+                            <div class="space-y-3">
+                                <button id="exportAllDataBtnMobile" class="btn-primary w-full py-3 rounded-lg font-semibold text-sm">
+                                    <i class="fas fa-file-export mr-2"></i> Export Semua Data ke CSV
+                                </button>
+                                <button id="clearAllDataBtnMobile" class="btn-secondary w-full py-3 rounded-lg font-semibold text-sm">
+                                    <i class="fas fa-trash mr-2"></i> Hapus Semua Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -551,6 +733,13 @@
                 </div>
                 <span class="menu-text">Pakan</span>
             </button>
+
+            <button class="menu-item" data-section="chartSection">
+                <div class="menu-icon">
+                    <i class="fas fa-chart-area"></i>
+                </div>
+                <span class="menu-text">Chart</span>
+            </button>
         </div>
     </nav>
 
@@ -581,6 +770,13 @@
         let currentTurbidity = 0.0;
         let currentTemperature = 27.0;
         let selectedSchedule = ['09:00', '15:00', '20:00'];
+        
+        // Chart instances
+        let waterLevelChart, turbidityChart, temperatureChart, foodStatusChart;
+        let waterLevelChartMobile, turbidityChartMobile, temperatureChartMobile, foodStatusChartMobile;
+
+        // Data storage - NEW STRUCTURE: Array of objects with all sensor data
+        let sensorData = [];
 
         // DOM elements
         const feedButton = document.getElementById('feedButton');
@@ -609,6 +805,10 @@
         const temperatureGaugeMobile = document.getElementById('temperatureGaugeMobile');
         const mqttStatus = document.getElementById('mqttStatus');
         const alertContainer = document.getElementById('alertContainer');
+        const exportAllDataBtn = document.getElementById('exportAllDataBtn');
+        const clearAllDataBtn = document.getElementById('clearAllDataBtn');
+        const exportAllDataBtnMobile = document.getElementById('exportAllDataBtnMobile');
+        const clearAllDataBtnMobile = document.getElementById('clearAllDataBtnMobile');
 
         // Mobile menu functionality
         function initMobileMenu() {
@@ -740,6 +940,9 @@
                 foodStatusMobile.className = statusClass;
                 foodStatusMobile.innerHTML = statusHTML;
             }
+            
+            // Add to data storage for chart
+            addSensorData('foodStatus', available ? 1 : 0);
         }
 
         // Update water level display with dark theme (both desktop and mobile)
@@ -781,6 +984,9 @@
                 waterLevelStatusMobile.textContent = statusText;
             }
             if (waterLevelGaugeMobile) drawGauge(waterLevelGaugeMobile, currentWaterLevel, 100, color);
+            
+            // Add to data storage for chart
+            addSensorData('waterLevel', currentWaterLevel);
         }
 
         // Update turbidity display - FIXED TO HANDLE ARDUINO VALUES (both desktop and mobile)
@@ -823,6 +1029,9 @@
                 turbidityStatusMobile.textContent = statusText;
             }
             if (turbidityGaugeMobile) drawGauge(turbidityGaugeMobile, currentTurbidity, 20, color);
+            
+            // Add to data storage for chart
+            addSensorData('turbidity', currentTurbidity);
         }
 
         // Update temperature display with dark theme (both desktop and mobile)
@@ -860,6 +1069,618 @@
                 temperatureStatusMobile.textContent = statusText;
             }
             if (temperatureGaugeMobile) drawGauge(temperatureGaugeMobile, currentTemperature - 15, 20, color);
+            
+            // Add to data storage for chart
+            addSensorData('temperature', currentTemperature);
+        }
+
+        // Add sensor data to storage - NEW: Store all sensor data in one array
+        function addSensorData(type, value) {
+            // Pastikan sensorData adalah array
+            if (!Array.isArray(sensorData)) {
+                sensorData = [];
+            }
+            
+            const timestamp = new Date().toISOString();
+            
+            // Check if we have data for this exact timestamp (within 1 second)
+            const existingIndex = sensorData.findIndex(item => 
+                Math.abs(new Date(item.timestamp).getTime() - new Date(timestamp).getTime()) < 1000
+            );
+            
+            if (existingIndex !== -1) {
+                // Update existing entry
+                sensorData[existingIndex][type] = value;
+                sensorData[existingIndex].timestamp = timestamp; // Update timestamp
+            } else {
+                // Create new entry with all current sensor values
+                const newEntry = {
+                    timestamp,
+                    waterLevel: type === 'waterLevel' ? value : currentWaterLevel,
+                    turbidity: type === 'turbidity' ? value : currentTurbidity,
+                    temperature: type === 'temperature' ? value : currentTemperature,
+                    foodStatus: type === 'foodStatus' ? value : (isFoodAvailable ? 1 : 0)
+                };
+                sensorData.push(newEntry);
+            }
+            
+            // Keep only last 100 data points to prevent memory issues
+            if (sensorData.length > 100) {
+                sensorData = sensorData.slice(-100);
+            }
+            
+            // Save to localStorage
+            saveDataToLocalStorage();
+            
+            // Update charts
+            updateAllCharts();
+        }
+
+        // Save data to localStorage
+        function saveDataToLocalStorage() {
+            try {
+                localStorage.setItem('fishFeederSensorData', JSON.stringify(sensorData));
+            } catch (e) {
+                console.error('Failed to save data to localStorage:', e);
+            }
+        }
+
+        // Load data from localStorage
+        function loadDataFromLocalStorage() {
+            try {
+                const savedData = localStorage.getItem('fishFeederSensorData');
+                if (savedData) {
+                    const parsedData = JSON.parse(savedData);
+                    // Pastikan data yang diload adalah array
+                    sensorData = Array.isArray(parsedData) ? parsedData : [];
+                } else {
+                    sensorData = [];
+                }
+            } catch (e) {
+                console.error('Failed to load data from localStorage:', e);
+                sensorData = []; // Reset ke array kosong jika error
+            }
+        }
+
+        // Initialize charts
+        function initCharts() {
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: '#e2e8f0',
+                        bodyColor: '#e2e8f0',
+                        borderColor: 'rgba(148, 163, 184, 0.1)',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.1)',
+                            borderColor: 'rgba(148, 163, 184, 0.1)'
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            maxTicksLimit: 8
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(148, 163, 184, 0.1)',
+                            borderColor: 'rgba(148, 163, 184, 0.1)'
+                        },
+                        ticks: {
+                            color: '#94a3b8'
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                elements: {
+                    point: {
+                        radius: 0,
+                        hoverRadius: 4
+                    }
+                }
+            };
+
+            // Water Level Chart
+            const waterLevelCtx = document.getElementById('waterLevelChart').getContext('2d');
+            waterLevelChart = new Chart(waterLevelCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Level Air (cm)',
+                        data: [],
+                        borderColor: '#14b8a6',
+                        backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            min: 0,
+                            max: 100
+                        }
+                    }
+                }
+            });
+
+            // Turbidity Chart
+            const turbidityCtx = document.getElementById('turbidityChart').getContext('2d');
+            turbidityChart = new Chart(turbidityCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Kekeruhan (NTU)',
+                        data: [],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            min: 0,
+                            max: 20
+                        }
+                    }
+                }
+            });
+
+            // Temperature Chart
+            const temperatureCtx = document.getElementById('temperatureChart').getContext('2d');
+            temperatureChart = new Chart(temperatureCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Suhu (°C)',
+                        data: [],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            min: 20,
+                            max: 40
+                        }
+                    }
+                }
+            });
+
+            // Food Status Chart
+            const foodStatusCtx = document.getElementById('foodStatusChart').getContext('2d');
+            foodStatusChart = new Chart(foodStatusCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Status Pakan',
+                        data: [],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        stepped: true
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            min: 0,
+                            max: 1.2,
+                            ticks: {
+                                ...chartOptions.scales.y.ticks,
+                                callback: function(value) {
+                                    return value === 1 ? 'Tersedia' : 'Kosong';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Mobile Charts - Using the same options
+            // Water Level Chart Mobile
+            const waterLevelCtxMobile = document.getElementById('waterLevelChartMobile').getContext('2d');
+            waterLevelChartMobile = new Chart(waterLevelCtxMobile, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Level Air (cm)',
+                        data: [],
+                        borderColor: '#14b8a6',
+                        backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            min: 0,
+                            max: 100
+                        }
+                    }
+                }
+            });
+
+            // Turbidity Chart Mobile
+            const turbidityCtxMobile = document.getElementById('turbidityChartMobile').getContext('2d');
+            turbidityChartMobile = new Chart(turbidityCtxMobile, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Kekeruhan (NTU)',
+                        data: [],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            min: 0,
+                            max: 20
+                        }
+                    }
+                }
+            });
+
+            // Temperature Chart Mobile
+            const temperatureCtxMobile = document.getElementById('temperatureChartMobile').getContext('2d');
+            temperatureChartMobile = new Chart(temperatureCtxMobile, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Suhu (°C)',
+                        data: [],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            min: 20,
+                            max: 40
+                        }
+                    }
+                }
+            });
+
+            // Food Status Chart Mobile
+            const foodStatusCtxMobile = document.getElementById('foodStatusChartMobile').getContext('2d');
+            foodStatusChartMobile = new Chart(foodStatusCtxMobile, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Status Pakan',
+                        data: [],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        stepped: true
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            min: 0,
+                            max: 1.2,
+                            ticks: {
+                                ...chartOptions.scales.y.ticks,
+                                callback: function(value) {
+                                    return value === 1 ? 'Tersedia' : 'Kosong';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Load existing data and update charts
+            loadDataFromLocalStorage();
+            updateAllCharts();
+        }
+
+        // Update all charts with current data
+        function updateAllCharts() {
+            updateWaterLevelChart();
+            updateTurbidityChart();
+            updateTemperatureChart();
+            updateFoodStatusChart();
+        }
+
+        // Update water level chart - FIXED: Added array validation
+        function updateWaterLevelChart() {
+            // Pastikan sensorData adalah array
+            const data = Array.isArray(sensorData) ? sensorData : [];
+            
+            // Jika data kosong, beri nilai default
+            if (data.length === 0) {
+                const currentTime = new Date().toLocaleTimeString('id-ID', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                if (waterLevelChart) {
+                    waterLevelChart.data.labels = [currentTime];
+                    waterLevelChart.data.datasets[0].data = [currentWaterLevel];
+                    waterLevelChart.update('none');
+                }
+                
+                if (waterLevelChartMobile) {
+                    waterLevelChartMobile.data.labels = [currentTime];
+                    waterLevelChartMobile.data.datasets[0].data = [currentWaterLevel];
+                    waterLevelChartMobile.update('none');
+                }
+                return;
+            }
+            
+            const labels = data.map(item => {
+                const date = new Date(item.timestamp);
+                return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+            });
+            const values = data.map(item => item.waterLevel || currentWaterLevel);
+            
+            if (waterLevelChart) {
+                waterLevelChart.data.labels = labels;
+                waterLevelChart.data.datasets[0].data = values;
+                waterLevelChart.update('none');
+            }
+            
+            if (waterLevelChartMobile) {
+                waterLevelChartMobile.data.labels = labels;
+                waterLevelChartMobile.data.datasets[0].data = values;
+                waterLevelChartMobile.update('none');
+            }
+        }
+
+        // Update turbidity chart - FIXED: Added array validation
+        function updateTurbidityChart() {
+            // Pastikan sensorData adalah array
+            const data = Array.isArray(sensorData) ? sensorData : [];
+            
+            if (data.length === 0) {
+                const currentTime = new Date().toLocaleTimeString('id-ID', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                if (turbidityChart) {
+                    turbidityChart.data.labels = [currentTime];
+                    turbidityChart.data.datasets[0].data = [currentTurbidity];
+                    turbidityChart.update('none');
+                }
+                
+                if (turbidityChartMobile) {
+                    turbidityChartMobile.data.labels = [currentTime];
+                    turbidityChartMobile.data.datasets[0].data = [currentTurbidity];
+                    turbidityChartMobile.update('none');
+                }
+                return;
+            }
+            
+            const labels = data.map(item => {
+                const date = new Date(item.timestamp);
+                return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+            });
+            const values = data.map(item => item.turbidity || currentTurbidity);
+            
+            if (turbidityChart) {
+                turbidityChart.data.labels = labels;
+                turbidityChart.data.datasets[0].data = values;
+                turbidityChart.update('none');
+            }
+            
+            if (turbidityChartMobile) {
+                turbidityChartMobile.data.labels = labels;
+                turbidityChartMobile.data.datasets[0].data = values;
+                turbidityChartMobile.update('none');
+            }
+        }
+
+        // Update temperature chart - FIXED: Added array validation
+        function updateTemperatureChart() {
+            // Pastikan sensorData adalah array
+            const data = Array.isArray(sensorData) ? sensorData : [];
+            
+            if (data.length === 0) {
+                const currentTime = new Date().toLocaleTimeString('id-ID', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                if (temperatureChart) {
+                    temperatureChart.data.labels = [currentTime];
+                    temperatureChart.data.datasets[0].data = [currentTemperature];
+                    temperatureChart.update('none');
+                }
+                
+                if (temperatureChartMobile) {
+                    temperatureChartMobile.data.labels = [currentTime];
+                    temperatureChartMobile.data.datasets[0].data = [currentTemperature];
+                    temperatureChartMobile.update('none');
+                }
+                return;
+            }
+            
+            const labels = data.map(item => {
+                const date = new Date(item.timestamp);
+                return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+            });
+            const values = data.map(item => item.temperature || currentTemperature);
+            
+            if (temperatureChart) {
+                temperatureChart.data.labels = labels;
+                temperatureChart.data.datasets[0].data = values;
+                temperatureChart.update('none');
+            }
+            
+            if (temperatureChartMobile) {
+                temperatureChartMobile.data.labels = labels;
+                temperatureChartMobile.data.datasets[0].data = values;
+                temperatureChartMobile.update('none');
+            }
+        }
+
+        // Update food status chart - FIXED: Added array validation
+        function updateFoodStatusChart() {
+            // Pastikan sensorData adalah array
+            const data = Array.isArray(sensorData) ? sensorData : [];
+            
+            if (data.length === 0) {
+                const currentTime = new Date().toLocaleTimeString('id-ID', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                if (foodStatusChart) {
+                    foodStatusChart.data.labels = [currentTime];
+                    foodStatusChart.data.datasets[0].data = [isFoodAvailable ? 1 : 0];
+                    foodStatusChart.update('none');
+                }
+                
+                if (foodStatusChartMobile) {
+                    foodStatusChartMobile.data.labels = [currentTime];
+                    foodStatusChartMobile.data.datasets[0].data = [isFoodAvailable ? 1 : 0];
+                    foodStatusChartMobile.update('none');
+                }
+                return;
+            }
+            
+            const labels = data.map(item => {
+                const date = new Date(item.timestamp);
+                return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+            });
+            const values = data.map(item => item.foodStatus !== undefined ? item.foodStatus : (isFoodAvailable ? 1 : 0));
+            
+            if (foodStatusChart) {
+                foodStatusChart.data.labels = labels;
+                foodStatusChart.data.datasets[0].data = values;
+                foodStatusChart.update('none');
+            }
+            
+            if (foodStatusChartMobile) {
+                foodStatusChartMobile.data.labels = labels;
+                foodStatusChartMobile.data.datasets[0].data = values;
+                foodStatusChartMobile.update('none');
+            }
+        }
+
+        // Export all data to CSV in one table
+        function exportAllDataToCSV() {
+            // Pastikan sensorData adalah array
+            const data = Array.isArray(sensorData) ? sensorData : [];
+            
+            if (data.length === 0) {
+                showAlert('Tidak ada data untuk diekspor!', 'warning');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            
+            // Add headers
+            const headers = ['Timestamp', 'Level Air (cm)', 'Kekeruhan (NTU)', 'Suhu (°C)', 'Status Pakan'];
+            csvContent += headers.join(',') + '\r\n';
+            
+            // Add data rows
+            data.forEach(item => {
+                const row = [
+                    item.timestamp,
+                    item.waterLevel || 0,
+                    item.turbidity || 0,
+                    item.temperature || 0,
+                    item.foodStatus === 1 ? 'Tersedia' : 'Kosong'
+                ];
+                csvContent += row.join(',') + '\r\n';
+            });
+            
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `sensor_data_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            
+            // Trigger download
+            link.click();
+            document.body.removeChild(link);
+            
+            showAlert('Semua data sensor berhasil diekspor ke CSV!', 'success');
+        }
+
+        // Clear all data
+        function clearAllData() {
+            if (confirm('Apakah Anda yakin ingin menghapus semua data sensor?')) {
+                sensorData = [];
+                saveDataToLocalStorage();
+                updateAllCharts();
+                showAlert('Semua data sensor berhasil dihapus!', 'success');
+            }
         }
 
         // Initialize MQTT connection
@@ -1184,12 +2005,33 @@
             });
         }
 
+        // Initialize global data controls
+        function initGlobalDataControls() {
+            // Export All Data Button
+            if (exportAllDataBtn) {
+                exportAllDataBtn.addEventListener('click', exportAllDataToCSV);
+            }
+            if (exportAllDataBtnMobile) {
+                exportAllDataBtnMobile.addEventListener('click', exportAllDataToCSV);
+            }
+
+            // Clear All Data Button
+            if (clearAllDataBtn) {
+                clearAllDataBtn.addEventListener('click', clearAllData);
+            }
+            if (clearAllDataBtnMobile) {
+                clearAllDataBtnMobile.addEventListener('click', clearAllData);
+            }
+        }
+
         // Initialize dashboard
         function initDashboard() {
             console.log('Initializing Fish Feeder Dashboard...');
             
             initMQTT();
             initMobileMenu();
+            initCharts();
+            initGlobalDataControls();
             
             // Add event listeners for feed buttons
             if (feedButton) feedButton.addEventListener('click', feedFish);
@@ -1204,6 +2046,27 @@
             updateWaterLevel(50);
             updateTurbidity(0.0);
             updateTemperature(27.0);
+
+            // Add some sample data for charts
+            setTimeout(() => {
+                // Add initial sample data if no data exists
+                if (sensorData.length === 0) {
+                    const now = new Date();
+                    for (let i = 10; i >= 0; i--) {
+                        const time = new Date(now.getTime() - i * 60000);
+                        const sampleEntry = {
+                            timestamp: time.toISOString(),
+                            waterLevel: 50 + Math.random() * 20,
+                            turbidity: Math.random() * 5,
+                            temperature: 25 + Math.random() * 5,
+                            foodStatus: 1
+                        };
+                        sensorData.push(sampleEntry);
+                    }
+                    saveDataToLocalStorage();
+                    updateAllCharts();
+                }
+            }, 1000);
 
             // Redraw gauges on window resize
             window.addEventListener('resize', () => {
@@ -1228,4 +2091,3 @@
 </body>
 
 </html>
-
